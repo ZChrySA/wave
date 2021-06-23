@@ -14,32 +14,30 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "android.hardware.biometrics.fingerprint@2.1-service.violet"
-
-#include <android/log.h>
-#include <hidl/HidlSupport.h>
-#include <hidl/HidlTransportSupport.h>
-#include <android/hardware/biometrics/fingerprint/2.1/IBiometricsFingerprint.h>
-#include <android/hardware/biometrics/fingerprint/2.1/types.h>
 #include "BiometricsFingerprint.h"
 
-using android::hardware::biometrics::fingerprint::V2_1::IBiometricsFingerprint;
-using android::hardware::biometrics::fingerprint::V2_1::implementation::BiometricsFingerprint;
+// libhwbinder:
 using android::hardware::configureRpcThreadpool;
 using android::hardware::joinRpcThreadpool;
-using android::sp;
+
+// Generated HIDL files
+using android::hardware::biometrics::fingerprint::V2_1::IBiometricsFingerprint;
+using android::hardware::biometrics::fingerprint::V2_1::implementation::BiometricsFingerprint;
 
 int main() {
-    android::sp<IBiometricsFingerprint> bio = BiometricsFingerprint::getInstance();
+    android::sp<IBiometricsFingerprint> service = BiometricsFingerprint::getInstance();
+
+    if (service == nullptr) {
+        ALOGE("Instance of BiometricsFingerprint is null");
+        return 1;
+    }
 
     configureRpcThreadpool(1, true /*callerWillJoin*/);
 
-    if (bio != nullptr) {
-        if (::android::OK != bio->registerAsService()) {
-            return 1;
-        }
-    } else {
-        ALOGE("Can't create instance of BiometricsFingerprint, nullptr");
+    android::status_t status = service->registerAsService();
+    if (status != android::OK) {
+        ALOGE("Cannot register BiometricsFingerprint service");
+        return 1;
     }
 
     joinRpcThreadpool();

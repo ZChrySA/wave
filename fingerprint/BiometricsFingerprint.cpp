@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
- * Copyright (C) 2018-2021 The LineageOS Project
+ * Copyright (C) 2018 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#define LOG_TAG "android.hardware.biometrics.fingerprint@2.1-service.violet"
-#define LOG_VERBOSE "android.hardware.biometrics.fingerprint@2.1-service.violet"
 
-#include <hardware/hw_auth_token.h>
-
-#include <hardware/hardware.h>
-#include <hardware/fingerprint.h>
 #include "BiometricsFingerprint.h"
-
-#include <inttypes.h>
-#include <unistd.h>
 
 namespace android {
 namespace hardware {
@@ -213,44 +204,50 @@ IBiometricsFingerprint* BiometricsFingerprint::getInstance() {
 }
 
 fingerprint_device_t* getDeviceForVendor(const char *class_name) {
+    const hw_module_t *hw_module = nullptr;
     int err;
-    const hw_module_t *hw_mdl = nullptr;
-    ALOGD("Opening fingerprint hal library...");
-    if (0 != (err = hw_get_module_by_class(FINGERPRINT_HARDWARE_MODULE_ID, class_name, &hw_mdl))) {
-        ALOGE("Can't open fingerprint HW Module, class: %s, error: %d", class_name, err);
+
+    err = hw_get_module_by_class(FINGERPRINT_HARDWARE_MODULE_ID, class_name, &hw_module);
+    if (err) {
+        ALOGE("Failed to get fingerprint module: class %s, error %d", class_name, err);
         return nullptr;
     }
 
-    if (hw_mdl == nullptr) {
-        ALOGE("No valid fingerprint module, class: %s", class_name);
+    if (hw_module == nullptr) {
+        ALOGE("No valid fingerprint module: class %s", class_name);
         return nullptr;
     }
 
-    fingerprint_module_t const *module =
-        reinterpret_cast<const fingerprint_module_t*>(hw_mdl);
-    if (module->common.methods->open == nullptr) {
-        ALOGE("No valid open method, class: %s", class_name);
+    fingerprint_module_t const *fp_module =
+            reinterpret_cast<const fingerprint_module_t*>(hw_module);
+
+    if (fp_module->common.methods->open == nullptr) {
+        ALOGE("No valid open method: class %s", class_name);
         return nullptr;
     }
 
     hw_device_t *device = nullptr;
 
-    if (0 != (err = module->common.methods->open(hw_mdl, nullptr, &device))) {
-        ALOGE("Can't open fingerprint methods, class: %s, error: %d", class_name, err);
+    err = fp_module->common.methods->open(hw_module, nullptr, &device);
+    if (err) {
+        ALOGE("Can't open fingerprint methods, class %s, error: %d", class_name, err);
         return nullptr;
     }
 
     if (kVersion != device->version) {
-        // enforce version on new devices because of HIDL@2.1 translation layer
-        ALOGE("Wrong fp version. Expected %d, got %d", kVersion, device->version);
+        ALOGE("Wrong fingerprint version: expected %d, got %d", kVersion, device->version);
         return nullptr;
     }
 
-    fingerprint_device_t* fp_device =
-        reinterpret_cast<fingerprint_device_t*>(device);
+    fingerprint_device_t *fp_device =
+            reinterpret_cast<fingerprint_device_t*>(device);
 
-    ALOGI("Loaded fingerprint module, class: %s", class_name);
+    ALOGI("Loaded fingerprint module: class %s", class_name);
     return fp_device;
+}
+
+void setFpVendorProp(const char *fp_vendor) {
+    property_set("persist.vendor.sys.fp.vendor", fp_vendor);
 }
 
 fingerprint_device_t* getFingerprintDevice() {
@@ -260,6 +257,7 @@ fingerprint_device_t* getFingerprintDevice() {
     if (fp_device == nullptr) {
         ALOGE("Failed to load fpc fingerprint module");
     } else {
+        setFpVendorProp("fpc");
         return fp_device;
     }
 
@@ -267,8 +265,11 @@ fingerprint_device_t* getFingerprintDevice() {
     if (fp_device == nullptr) {
         ALOGE("Failed to load goodix fingerprint module");
     } else {
+        setFpVendorProp("goodix");
         return fp_device;
     }
+
+    setFpVendorProp("none");
 
     return nullptr;
 }
@@ -384,7 +385,7 @@ void BiometricsFingerprint::notify(const fingerprint_msg_t *msg) {
     }
 }
 
-} // namespace implementation
+}  // namespace implementation
 }  // namespace V2_1
 }  // namespace fingerprint
 }  // namespace biometrics
