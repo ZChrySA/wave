@@ -573,6 +573,16 @@ vendor/lib64/vendor.qti.gnss@3.0.so
 vendor/lib64/vendor.qti.gnss@4.0-service.so
 vendor/lib64/vendor.qti.gnss@4.0.so
 
+# GPS configs - from Sweet
+vendor/etc/apdr.conf
+vendor/etc/flp.conf
+vendor/etc/gnss_antenna_info.conf
+vendor/etc/gps.conf
+vendor/etc/izat.conf
+vendor/etc/lowi.conf
+vendor/etc/sap.conf
+vendor/etc/xtwifi.conf
+
 # IMS - from Sweet
 system_ext/lib64/libdiag_system.so
 system_ext/lib64/libimscamera_jni.so
