@@ -22,6 +22,11 @@ $(call inherit-product, device/xiaomi/violet/device.mk)
 # Inherit some common fluid stuff.
 $(call inherit-product, vendor/fluid/config/common_full_phone.mk)
 
+TARGET_BOOT_ANIMATION_RES := 1080
+
+PRODUCT_PRODUCT_PROPERTIES += \
+  ro.fluid.maintainer=ZChrySA \
+
 PRODUCT_NAME := fluid_violet
 PRODUCT_DEVICE := violet
 PRODUCT_BRAND := Xiaomi
